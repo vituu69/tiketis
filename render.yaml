@@ -1,0 +1,26 @@
+services:
+  #backend - api:
+  -type: web
+    name: double-entry-ingressos-api
+    runtime: docker
+    plan: free
+    region: Brazil
+    breanch: main
+    dockerfilePath: ./Dockerfile
+    envVars:
+      - key: PORT
+        value: 8080
+        -key: JWT_SECRET
+        generateValue: true
+        -key: DB_URL
+        fromDatabase:
+          name: ingressos-db
+          property: connectionString
+    healthCheckPath: /health
+
+databases:
+  - name: ingressos-db
+    plan: free
+    databaseName: simple_ingressos
+    user: ingressos_user
+    region: Brazil

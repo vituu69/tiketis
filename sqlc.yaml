@@ -1,0 +1,58 @@
+version: "2"
+
+sql:
+  - engine: "postgresql"
+
+    queries:
+      - "postgres/queries/"
+
+    schema:
+      - "postgres/migrations/"
+
+    gen:
+      go:
+        package: "sqlc"
+        out: "postgres/sqlc"
+        sql_package: "pgx/v5"
+        emit_json_tags: true
+        emit_interface: true
+        emit_empty_slices: true
+        emit_result_struct_pointers: true
+        emit_params_struct_pointers: true
+        emit_prepared_queries: false
+        emit_exact_table_names: false
+
+        query_parameter_limit: 5
+
+
+        overrides:
+
+          # NUMERIC -> string
+          - db_type: "pg_catalog.numeric"
+            go_type: "string"
+
+          # UUID -> google uuid
+          - db_type: "uuid"
+            go_type:
+              import: "github.com/google/uuid"
+              type: "UUID"
+
+          # ENUMS -> string
+          - db_type: "ticket_status"
+            go_type: "string"
+
+          - db_type: "reservation_status"
+            go_type: "string"
+
+          - db_type: "order_status"
+            go_type: "string"
+
+          - db_type: "payment_status"
+            go_type: "string"
+
+          # timestamps opcionais
+          - db_type: "pg_catalog.timestamp"
+            nullable: true
+            go_type:
+              import: "time"
+              type: "Time"
