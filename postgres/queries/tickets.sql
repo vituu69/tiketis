@@ -34,7 +34,8 @@ RETURNING *;
 -- Vincula o ingresso ao pedido final e gera o token do QR Code (pós-pagamento)
 UPDATE tickets
 SET status = 'available',
-    order_id = NULL
+    order_id = $2,
+    qr_code_token =$3
 WHERE id = $1;
 
 -- name: ListTicketsByOrder :many

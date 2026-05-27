@@ -30,14 +30,14 @@ resolve_db_url() {
     echo "$db_url"
 }
 
-if [ "${RUN_DB_MIGRATIONS_ON_START:-true}" != "true" ]; then
-    echo "RUN_DB_MIGRATIONS_ON_START is not 'true'; skipping migrations"
+if [ "${RUN_DB_MIGRATION_ON_START:-true}" != "true" ]; then
+    echo "RUN_DB_MIGRATION_ON_START is not 'true'; skipping migration"
 else
     db_url="$(resolve_db_url)"
 fi
 
-if [ "${RUN_DB_MIGRATIONS_ON_START:-true}" = "true" ] && [ -n "${db_url:-}" ]; then
-    echo "Running database migrations..."
+if [ "${RUN_DB_MIGRATION_ON_START:-true}" = "true" ] && [ -n "${db_url:-}" ]; then
+    echo "Running database migration..."
 
     # golang-migrate expects postgres:// (not postgresql://)
     migrate_db_url="$db_url"
@@ -53,7 +53,7 @@ if [ "${RUN_DB_MIGRATIONS_ON_START:-true}" = "true" ] && [ -n "${db_url:-}" ]; t
 
     while [ "$attempt" -le "$max_attempts" ]; do
         set +e
-        migration_output=$(migrate -path /app/postgres/migrations -database "$migrate_db_url" up 2>&1)
+        migration_output=$(migrate -path /app/postgres/migration -database "$migrate_db_url" up 2>&1)
         migration_status=$?
         set -e
 
@@ -69,7 +69,7 @@ if [ "${RUN_DB_MIGRATIONS_ON_START:-true}" = "true" ] && [ -n "${db_url:-}" ]; t
         fi
 
         if [ "$attempt" -lt "$max_attempts" ]; then
-            echo "Database not ready yet; retrying migrations ($attempt/$max_attempts)..."
+            echo "Database not ready yet; retrying migration ($attempt/$max_attempts)..."
             sleep 5
         fi
 
@@ -80,13 +80,13 @@ if [ "${RUN_DB_MIGRATIONS_ON_START:-true}" = "true" ] && [ -n "${db_url:-}" ]; t
         echo "Migration failed"
         exit "$migration_status"
     fi
-elif [ "${RUN_DB_MIGRATIONS_ON_START:-true}" = "true" ]; then
+elif [ "${RUN_DB_MIGRATION_ON_START:-true}" = "true" ]; then
     if [ "${RENDER:-}" = "true" ]; then
         echo "ERROR: DB_URL is not set on this Render service."
         echo "Fix: Render dashboard -> your web service -> Environment -> add DB_URL"
         echo "     set to the Internal Connection String from your PostgreSQL service."
     else
-        echo "DB_URL not set; skipping migrations"
+        echo "DB_URL not set; skipping migration"
     fi
 fi
 

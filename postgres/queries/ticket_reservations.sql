@@ -46,7 +46,7 @@ SELECT * FROM ticket_reservations
 WHERE status = 'pending' 
   AND expires_at < NOW();
 
--- name ExpirePastReservations :exec
+-- name: ExpirePastReservations :exec
 -- Atualiza em lote o status das reservas que passaram do tempo
 UPDATE ticket_reservations
 SET status = 'expired'

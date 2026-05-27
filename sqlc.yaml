@@ -7,7 +7,7 @@ sql:
       - "postgres/queries/"
 
     schema:
-      - "postgres/migrations/"
+      - "postgres/migration/"
 
     gen:
       go:

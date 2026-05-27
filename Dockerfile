@@ -16,7 +16,7 @@ COPY --from=builder /out/ingressos /usr/local/bin/compra
 COPY --from=builder /out/migrate /usr/local/bin/migrate
 COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ca-certificates.crt
 COPY --from=builder /src/docs ./docs
-COPY --from=builder /src/postgres/migrations ./postgres/migrations
+COPY --from=builder /src/postgres/migration ./postgres/migration
 COPY docker-entrypoint /usr/local/bin/entrypoint
 
 ENV SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt \

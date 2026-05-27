@@ -1,1 +1,1 @@
--- nada pensado para por aqui
+DROP TABLE IF EXISTS ticket_reservations;
