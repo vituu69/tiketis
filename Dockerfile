@@ -1,11 +1,15 @@
-FROM golang:1.24-alpine AS builder
+# Altere de: FROM golang:1.24-alpine
+# Para:
+FROM golang:1.25-alpine AS builder
+
 WORKDIR /src
 
 COPY go.mod go.sum ./
 RUN go mod download
 
 COPY . .
-RUN CGO_ENABLED=0 GOOS=linux go build -trimpath -ldflags="-s -w" -o /out/ledger ./cmd/main.go
+
+RUN CGO_ENABLED=0 GOOS=linux go build -trimpath -ldflags="-s -w" -o /out/ingressos ./cmd/main.go
 RUN GOBIN=/out go install -tags 'postgres' github.com/golang-migrate/migrate/v4/cmd/migrate@v4.18.3
 
 #minimal runtime image
