@@ -6,3 +6,9 @@ CREATE TABLE ticket_types (
     total_quantity INT NOT NULL,
     available_quantity INT NOT NULL
 );
+
+-- Alterar ticket_types para regras de Meia-Entrada (Foco Brasil)
+ALTER TABLE ticket_types 
+ADD COLUMN is_half_price_eligible BOOLEAN NOT NULL DEFAULT TRUE,
+ADD COLUMN max_half_price_quantity INT NOT NULL DEFAULT 0, -- Lei dos 40% de cota de meia
+ADD COLUMN sold_half_price_quantity INT NOT NULL DEFAULT 0;
