@@ -6,6 +6,7 @@ package sqlc
 
 import (
 	"context"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
@@ -21,14 +22,17 @@ type Querier interface {
 	CancelReservation(ctx context.Context, id uuid.UUID) error
 	// Chamado quando o gateway de pagamento confirma o sucesso da compra
 	CompleteReservation(ctx context.Context, id uuid.UUID) error
+	CreateEscrowSettlement(ctx context.Context, orderID uuid.UUID, sellerAccountID uuid.UUID, amountToRelease string, status string, releaseAt pgtype.Timestamp) (*EscrowSettlement, error)
 	// Cria o pedido inicialmente com o status 'pending' (o total_amount vira string no Go)
 	CreateOrder(ctx context.Context, userID pgtype.UUID, totalAmount string) (*Order, error)
+	CreatePrimaryOrder(ctx context.Context, userID pgtype.UUID, totalAmount string, convenienceFee string, eventDate time.Time) (*CreatePrimaryOrderRow, error)
 	CreateReservation(ctx context.Context, ticketID uuid.UUID, userID uuid.UUID, expiresAt pgtype.Timestamp) (*TicketReservation, error)
 	CreateUser(ctx context.Context, email string, hashedPassword string) (*CreateUserRow, error)
 	// Atualiza em lote o status das reservas que passaram do tempo
 	ExpirePastReservations(ctx context.Context) error
 	// Trava o pedido para evitar que um webhook de pagamento processado duas vezes mude o status simultaneamente
 	GetOrderForUpdate(ctx context.Context, id uuid.UUID) (*Order, error)
+	GetPrimaryTicketTypeForUpdate(ctx context.Context, id uuid.UUID) (*TicketType, error)
 	GetReservation(ctx context.Context, id uuid.UUID) (*TicketReservation, error)
 	GetReservationForUpdate(ctx context.Context, id uuid.UUID) (*TicketReservation, error)
 	GetTicket(ctx context.Context, id uuid.UUID) (*Ticket, error)
@@ -36,11 +40,13 @@ type Querier interface {
 	// Trava o lote para atualizar a quantidade disponível com segurança financeira
 	GetTicketTypeForUpdate(ctx context.Context, id uuid.UUID) (*TicketType, error)
 	GetUserByEmail(ctx context.Context, email string) (*User, error)
+	IncrementHalfPriceCount(ctx context.Context, id uuid.UUID) error
 	ListActiveReservationsByUser(ctx context.Context, userID uuid.UUID) ([]*TicketReservation, error)
 	// Lista os ingressos livres para o usuário escolher na tela (sem travar o banco)
 	ListAvailableTickets(ctx context.Context, ticketTypeID uuid.UUID) ([]*Ticket, error)
 	// Usado pelo worker em Go para descobrir quem perdeu o prazo
 	ListExpiredReservations(ctx context.Context) ([]*TicketReservation, error)
+	ListMaturedSettlements(ctx context.Context, releaseAt pgtype.Timestamp) ([]*EscrowSettlement, error)
 	// Histórico de compras do cliente no app/site
 	ListOrdersByUser(ctx context.Context, userID pgtype.UUID) ([]*Order, error)
 	// Lista todos os setores/lotes de um evento para mostrar na página de vendas
@@ -51,8 +57,11 @@ type Querier interface {
 	ReleaseTicketsStock(ctx context.Context, availableQuantity int32, iD uuid.UUID) error
 	// Deduz a quantidade disponível quando uma reserva é criada
 	ReserveTicketsStock(ctx context.Context, availableQuantity int32, iD uuid.UUID) error
+	ReturnTicketToAvailable(ctx context.Context, id uuid.UUID) error
+	UpdateAccountBalance(ctx context.Context, balance string, iD uuid.UUID) error
 	// Atualiza o status do pedido (paid, cancelled, refunded)
 	UpdateOrderStatus(ctx context.Context, status string, iD uuid.UUID) error
+	UpdateSettlementStatus(ctx context.Context, status string, iD uuid.UUID) error
 	// Caso precise virar o lote ou alterar o valor (o preço vira string no Go)
 	UpdateTicketTypePrice(ctx context.Context, price string, iD uuid.UUID) (*TicketType, error)
 }

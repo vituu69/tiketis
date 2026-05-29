@@ -5,16 +5,41 @@
 package sqlc
 
 import (
+	"time"
+
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
-type Order struct {
+type Account struct {
 	ID          uuid.UUID        `json:"id"`
-	UserID      pgtype.UUID      `json:"user_id"`
-	TotalAmount string           `json:"total_amount"`
-	Status      string           `json:"status"`
+	OwnerUserID pgtype.UUID      `json:"owner_user_id"`
+	Balance     string           `json:"balance"`
 	CreatedAt   pgtype.Timestamp `json:"created_at"`
+}
+
+type EscrowSettlement struct {
+	ID              uuid.UUID        `json:"id"`
+	OrderID         uuid.UUID        `json:"order_id"`
+	SellerAccountID uuid.UUID        `json:"seller_account_id"`
+	AmountToRelease string           `json:"amount_to_release"`
+	Status          string           `json:"status"`
+	ReleaseAt       pgtype.Timestamp `json:"release_at"`
+	ReleasedAt      time.Time        `json:"released_at"`
+	CreatedAt       pgtype.Timestamp `json:"created_at"`
+}
+
+type Order struct {
+	ID                       uuid.UUID        `json:"id"`
+	UserID                   pgtype.UUID      `json:"user_id"`
+	TotalAmount              string           `json:"total_amount"`
+	Status                   string           `json:"status"`
+	CreatedAt                pgtype.Timestamp `json:"created_at"`
+	ConvenienceFee           string           `json:"convenience_fee"`
+	PlatformType             string           `json:"platform_type"`
+	SecondarySellerAccountID pgtype.UUID      `json:"secondary_seller_account_id"`
+	NetSellerAmount          pgtype.Numeric   `json:"net_seller_amount"`
+	EventDate                time.Time        `json:"event_date"`
 }
 
 type Ticket struct {
@@ -36,12 +61,17 @@ type TicketReservation struct {
 }
 
 type TicketType struct {
-	ID                uuid.UUID `json:"id"`
-	EventID           uuid.UUID `json:"event_id"`
-	Nome              string    `json:"nome"`
-	Price             string    `json:"price"`
-	TotalQuantity     int32     `json:"total_quantity"`
-	AvailableQuantity int32     `json:"available_quantity"`
+	ID                    uuid.UUID   `json:"id"`
+	EventID               uuid.UUID   `json:"event_id"`
+	Nome                  string      `json:"nome"`
+	Price                 string      `json:"price"`
+	TotalQuantity         int32       `json:"total_quantity"`
+	AvailableQuantity     int32       `json:"available_quantity"`
+	IsHalfPriceEligible   bool        `json:"is_half_price_eligible"`
+	MaxHalfPriceQuantity  int32       `json:"max_half_price_quantity"`
+	SoldHalfPriceQuantity int32       `json:"sold_half_price_quantity"`
+	ProducerAccountID     pgtype.UUID `json:"producer_account_id"`
+	EventDate             time.Time   `json:"event_date"`
 }
 
 type User struct {

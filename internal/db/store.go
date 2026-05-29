@@ -7,8 +7,8 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
-	"github.com/lib/pq"
 	"github.com/vituu69/tiketis/postgres/sqlc"
 )
 
@@ -18,10 +18,17 @@ type Store struct {
 	db *pgxpool.Pool
 }
 
+func NewStore(db *pgxpool.Pool) *Store {
+	return &Store{
+		Queries: sqlc.New(db),
+		db:      db,
+	}
+}
+
 // reporta os erros de serialização
 func isSerializationError(err error) bool {
-	var pqErr *pq.Error
-	return errors.As(err, &pqErr) && pqErr.Code == "40001"
+	var pgErr *pgconn.PgError
+	return errors.As(err, &pgErr) && pgErr.Code == "40001"
 }
 
 // A função ExecTx executa a função fn dentro de uma transação e lida com o rollback em caso de erro.
@@ -58,13 +65,8 @@ func (store *Store) execTxOnce(ctx context.Context, fn func(q *sqlc.Queries) err
 	defer tx.Rollback(ctx)
 
 	// Bind sqlc queries para essa transação handle
-	q := store.Queries.WithTx(tx)
+	q := sqlc.New(tx)
 	if err := fn(q); err != nil {
-		// Sempre reverta a operação em caso de falha na transação/consulta.
-		if rbErr := fn(q); rbErr != nil {
-			return fmt.Errorf("tx falhou %w, rollback falhou: %v", err, rbErr)
-
-		}
 		return err
 	}
 	if err := tx.Commit(ctx); err != nil {

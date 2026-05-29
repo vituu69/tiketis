@@ -14,7 +14,7 @@ import (
 
 const attachTicketToOrder = `-- name: AttachTicketToOrder :exec
 UPDATE tickets
-SET status = 'available',
+SET status = 'sold',
     order_id = $2,
     qr_code_token =$3
 WHERE id = $1
@@ -147,4 +147,18 @@ func (q *Queries) ListTicketsByOrder(ctx context.Context, orderID pgtype.UUID) (
 		return nil, err
 	}
 	return items, nil
+}
+
+const returnTicketToAvailable = `-- name: ReturnTicketToAvailable :exec
+UPDATE tickets
+SET status = 'available',
+    order_id = NULL,
+    qr_code_token = NULL
+WHERE id = $1
+    AND status = 'reserved'
+`
+
+func (q *Queries) ReturnTicketToAvailable(ctx context.Context, id uuid.UUID) error {
+	_, err := q.db.Exec(ctx, returnTicketToAvailable, id)
+	return err
 }

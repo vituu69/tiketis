@@ -12,7 +12,7 @@ import (
 )
 
 const getTicketType = `-- name: GetTicketType :one
-SELECT id, event_id, nome, price, total_quantity, available_quantity FROM ticket_types
+SELECT id, event_id, nome, price, total_quantity, available_quantity, is_half_price_eligible, max_half_price_quantity, sold_half_price_quantity, producer_account_id, event_date FROM ticket_types
 WHERE id = $1
 LIMIT 1
 `
@@ -27,12 +27,17 @@ func (q *Queries) GetTicketType(ctx context.Context, id uuid.UUID) (*TicketType,
 		&i.Price,
 		&i.TotalQuantity,
 		&i.AvailableQuantity,
+		&i.IsHalfPriceEligible,
+		&i.MaxHalfPriceQuantity,
+		&i.SoldHalfPriceQuantity,
+		&i.ProducerAccountID,
+		&i.EventDate,
 	)
 	return &i, err
 }
 
 const getTicketTypeForUpdate = `-- name: GetTicketTypeForUpdate :one
-SELECT id, event_id, nome, price, total_quantity, available_quantity FROM ticket_types
+SELECT id, event_id, nome, price, total_quantity, available_quantity, is_half_price_eligible, max_half_price_quantity, sold_half_price_quantity, producer_account_id, event_date FROM ticket_types
 WHERE id = $1
 LIMIT 1
 FOR UPDATE
@@ -49,12 +54,17 @@ func (q *Queries) GetTicketTypeForUpdate(ctx context.Context, id uuid.UUID) (*Ti
 		&i.Price,
 		&i.TotalQuantity,
 		&i.AvailableQuantity,
+		&i.IsHalfPriceEligible,
+		&i.MaxHalfPriceQuantity,
+		&i.SoldHalfPriceQuantity,
+		&i.ProducerAccountID,
+		&i.EventDate,
 	)
 	return &i, err
 }
 
 const listTicketTypesByEvent = `-- name: ListTicketTypesByEvent :many
-SELECT id, event_id, nome, price, total_quantity, available_quantity FROM ticket_types
+SELECT id, event_id, nome, price, total_quantity, available_quantity, is_half_price_eligible, max_half_price_quantity, sold_half_price_quantity, producer_account_id, event_date FROM ticket_types
 WHERE event_id = $1
 ORDER BY price ASC
 `
@@ -76,6 +86,11 @@ func (q *Queries) ListTicketTypesByEvent(ctx context.Context, eventID uuid.UUID)
 			&i.Price,
 			&i.TotalQuantity,
 			&i.AvailableQuantity,
+			&i.IsHalfPriceEligible,
+			&i.MaxHalfPriceQuantity,
+			&i.SoldHalfPriceQuantity,
+			&i.ProducerAccountID,
+			&i.EventDate,
 		); err != nil {
 			return nil, err
 		}
@@ -115,7 +130,7 @@ const updateTicketTypePrice = `-- name: UpdateTicketTypePrice :one
 UPDATE ticket_types
 SET price = $1
 WHERE id = $2
-RETURNING id, event_id, nome, price, total_quantity, available_quantity
+RETURNING id, event_id, nome, price, total_quantity, available_quantity, is_half_price_eligible, max_half_price_quantity, sold_half_price_quantity, producer_account_id, event_date
 `
 
 // Caso precise virar o lote ou alterar o valor (o preço vira string no Go)
@@ -129,6 +144,11 @@ func (q *Queries) UpdateTicketTypePrice(ctx context.Context, price string, iD uu
 		&i.Price,
 		&i.TotalQuantity,
 		&i.AvailableQuantity,
+		&i.IsHalfPriceEligible,
+		&i.MaxHalfPriceQuantity,
+		&i.SoldHalfPriceQuantity,
+		&i.ProducerAccountID,
+		&i.EventDate,
 	)
 	return &i, err
 }

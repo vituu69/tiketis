@@ -15,7 +15,7 @@ import (
 const createOrder = `-- name: CreateOrder :one
 INSERT INTO orders (user_id, total_amount, status, Created_at)
 VALUES ($1, $2, 'pending', NOW())
-RETURNING id, user_id, total_amount, status, created_at
+RETURNING id, user_id, total_amount, status, created_at, convenience_fee, platform_type, secondary_seller_account_id, net_seller_amount, event_date
 `
 
 // Cria o pedido inicialmente com o status 'pending' (o total_amount vira string no Go)
@@ -28,12 +28,17 @@ func (q *Queries) CreateOrder(ctx context.Context, userID pgtype.UUID, totalAmou
 		&i.TotalAmount,
 		&i.Status,
 		&i.CreatedAt,
+		&i.ConvenienceFee,
+		&i.PlatformType,
+		&i.SecondarySellerAccountID,
+		&i.NetSellerAmount,
+		&i.EventDate,
 	)
 	return &i, err
 }
 
 const getOrderForUpdate = `-- name: GetOrderForUpdate :one
-SELECT id, user_id, total_amount, status, created_at FROM orders
+SELECT id, user_id, total_amount, status, created_at, convenience_fee, platform_type, secondary_seller_account_id, net_seller_amount, event_date FROM orders
 WHERE id = $1 LIMIT 1
 FOR UPDATE
 `
@@ -48,12 +53,17 @@ func (q *Queries) GetOrderForUpdate(ctx context.Context, id uuid.UUID) (*Order, 
 		&i.TotalAmount,
 		&i.Status,
 		&i.CreatedAt,
+		&i.ConvenienceFee,
+		&i.PlatformType,
+		&i.SecondarySellerAccountID,
+		&i.NetSellerAmount,
+		&i.EventDate,
 	)
 	return &i, err
 }
 
 const listOrdersByUser = `-- name: ListOrdersByUser :many
-SELECT id, user_id, total_amount, status, created_at FROM orders
+SELECT id, user_id, total_amount, status, created_at, convenience_fee, platform_type, secondary_seller_account_id, net_seller_amount, event_date FROM orders
 WHERE user_id = $1
 ORDER BY created_at DESC
 `
@@ -74,6 +84,11 @@ func (q *Queries) ListOrdersByUser(ctx context.Context, userID pgtype.UUID) ([]*
 			&i.TotalAmount,
 			&i.Status,
 			&i.CreatedAt,
+			&i.ConvenienceFee,
+			&i.PlatformType,
+			&i.SecondarySellerAccountID,
+			&i.NetSellerAmount,
+			&i.EventDate,
 		); err != nil {
 			return nil, err
 		}

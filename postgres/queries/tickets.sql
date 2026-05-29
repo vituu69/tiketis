@@ -33,7 +33,7 @@ RETURNING *;
 -- name: AttachTicketToOrder :exec
 -- Vincula o ingresso ao pedido final e gera o token do QR Code (pós-pagamento)
 UPDATE tickets
-SET status = 'available',
+SET status = 'sold',
     order_id = $2,
     qr_code_token =$3
 WHERE id = $1;
@@ -43,3 +43,10 @@ WHERE id = $1;
 SELECT * FROM tickets
 WHERE order_id = $1;
 
+-- name: ReturnTicketToAvailable :exec
+UPDATE tickets
+SET status = 'available',
+    order_id = NULL,
+    qr_code_token = NULL
+WHERE id = $1
+    AND status = 'reserved';
