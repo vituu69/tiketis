@@ -3,11 +3,13 @@ package service
 import (
 	"context"
 	"errors"
+	"fmt"
 	"time"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/vituu69/tiketis/internal/db"
+	"github.com/vituu69/tiketis/internal/like-redis/infrastructure/domain/repository"
 	"github.com/vituu69/tiketis/postgres/sqlc"
 )
 
@@ -22,15 +24,24 @@ var (
 	ErrTicketAlreadySold = errors.New("ticket has already been sold")
 	// ErrInvalidReservationUser acontece se um usuário tentar pagar ou manipular a reserva de outra pessoa.
 	ErrInvalidReservationUser = errors.New("reservation does not belong to this user")
+	// ErrTicketTypeLocked evita corrida local enquanto outro processo reserva o mesmo lote/setor.
+	ErrTicketTypeLocked = errors.New("ticket type is temporarily locked")
 )
 
 type IngressService struct {
-	store *db.Store
+	store  *db.Store
+	memory repository.KeyValueRepository
 }
 
-func NewIngressService(store *db.Store) *IngressService {
+func NewIngressService(store *db.Store, memory ...repository.KeyValueRepository) *IngressService {
+	var mem repository.KeyValueRepository
+	if len(memory) > 0 {
+		mem = memory[0]
+	}
+
 	return &IngressService{
-		store: store,
+		store:  store,
+		memory: mem,
 	}
 }
 
@@ -41,7 +52,19 @@ type ReserveTicketParams struct {
 }
 
 func (s *IngressService) ReserveTicket(ctx context.Context, arg ReserveTicketParams) error {
-	return s.store.ExecTx(ctx, func(q *sqlc.Queries) error {
+	const reservationTTL = 5 * time.Minute
+
+	lockOwner := uuid.NewString()
+	lockKey := fmt.Sprintf("lock:ticket_type:%s", arg.TicketTypeID)
+	if s.memory != nil {
+		if ok := s.memory.AcquireLock(ctx, lockKey, lockOwner, 10*time.Second); !ok {
+			return ErrTicketTypeLocked
+		}
+		defer s.memory.ReleaseLock(context.Background(), lockKey, lockOwner)
+	}
+
+	var reservation *sqlc.TicketReservation
+	err := s.store.ExecTx(ctx, func(q *sqlc.Queries) error {
 		ticketType, err := q.GetTicketTypeForUpdate(ctx, arg.TicketTypeID)
 		if err != nil {
 			return err
@@ -85,14 +108,32 @@ func (s *IngressService) ReserveTicket(ctx context.Context, arg ReserveTicketPar
 		}
 
 		// cria reserva
-		_, err = q.CreateReservation(ctx, ticket.ID, arg.UserID, pgtype.Timestamp{
-			Time:  time.Now().Add(5 * time.Minute),
+		reservation, err = q.CreateReservation(ctx, ticket.ID, arg.UserID, pgtype.Timestamp{
+			Time:  time.Now().Add(reservationTTL),
 			Valid: true,
 		})
 
 		return err
 
 	})
+	if err != nil {
+		return err
+	}
+
+	if s.memory != nil && reservation != nil {
+		reservationKey := fmt.Sprintf("reservation:%s", reservation.ID)
+		userReservationKey := fmt.Sprintf(
+			"user:%s:ticket_type:%s:reservation",
+			arg.UserID,
+			arg.TicketTypeID,
+		)
+		value := fmt.Sprintf("%s:%s", reservation.UserID, reservation.TicketID)
+
+		s.memory.SetEX(ctx, reservationKey, value, reservationTTL)
+		s.memory.SetEX(ctx, userReservationKey, reservation.ID.String(), reservationTTL)
+	}
+
+	return nil
 
 }
 
@@ -122,6 +163,14 @@ func (s *IngressService) ReturnReservationToStock(ctx context.Context, reservati
 		}
 
 		err = q.CancelReservation(ctx, reservation.ID)
+		if err == nil && s.memory != nil {
+			s.memory.Del(ctx, fmt.Sprintf("reservation:%s", reservation.ID))
+			s.memory.Del(ctx, fmt.Sprintf(
+				"user:%s:ticket_type:%s:reservation",
+				reservation.UserID,
+				ticket.TicketTypeID,
+			))
+		}
 		return err
 	})
 }

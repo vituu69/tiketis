@@ -24,6 +24,11 @@ type CreateUserRow struct {
 	CreatedAt pgtype.Timestamptz `json:"created_at"`
 }
 
+type CreateUserParams struct {
+	Email          string `json:"email"`
+	HashedPassword string `json:"hashed_password"`
+}
+
 func (q *Queries) CreateUser(ctx context.Context, email string, hashedPassword string) (*CreateUserRow, error) {
 	row := q.db.QueryRow(ctx, createUser, email, hashedPassword)
 	var i CreateUserRow
