@@ -13,6 +13,27 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const createAccount = `-- name: CreateAccount :one
+INSERT INTO accounts (
+    owner_user_id
+) VALUES (
+    $1
+)
+RETURNING id, owner_user_id, balance, created_at
+`
+
+func (q *Queries) CreateAccount(ctx context.Context, ownerUserID pgtype.UUID) (*Account, error) {
+	row := q.db.QueryRow(ctx, createAccount, ownerUserID)
+	var i Account
+	err := row.Scan(
+		&i.ID,
+		&i.OwnerUserID,
+		&i.Balance,
+		&i.CreatedAt,
+	)
+	return &i, err
+}
+
 const createEscrowSettlement = `-- name: CreateEscrowSettlement :one
 INSERT INTO escrow_settlements (
     order_id,
@@ -43,6 +64,25 @@ func (q *Queries) CreateEscrowSettlement(ctx context.Context, orderID uuid.UUID,
 		&i.Status,
 		&i.ReleaseAt,
 		&i.ReleasedAt,
+		&i.CreatedAt,
+	)
+	return &i, err
+}
+
+const getAccount = `-- name: GetAccount :one
+SELECT id, owner_user_id, balance, created_at
+FROM accounts
+WHERE id = $1
+LIMIT 1
+`
+
+func (q *Queries) GetAccount(ctx context.Context, id uuid.UUID) (*Account, error) {
+	row := q.db.QueryRow(ctx, getAccount, id)
+	var i Account
+	err := row.Scan(
+		&i.ID,
+		&i.OwnerUserID,
+		&i.Balance,
 		&i.CreatedAt,
 	)
 	return &i, err
@@ -137,6 +177,38 @@ WHERE id = $1
 func (q *Queries) IncrementHalfPriceCount(ctx context.Context, id uuid.UUID) error {
 	_, err := q.db.Exec(ctx, incrementHalfPriceCount, id)
 	return err
+}
+
+const listAccountsByOwner = `-- name: ListAccountsByOwner :many
+SELECT id, owner_user_id, balance, created_at
+FROM accounts
+WHERE owner_user_id = $1
+ORDER BY created_at DESC
+`
+
+func (q *Queries) ListAccountsByOwner(ctx context.Context, ownerUserID pgtype.UUID) ([]*Account, error) {
+	rows, err := q.db.Query(ctx, listAccountsByOwner, ownerUserID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []*Account{}
+	for rows.Next() {
+		var i Account
+		if err := rows.Scan(
+			&i.ID,
+			&i.OwnerUserID,
+			&i.Balance,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, &i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const listMaturedSettlements = `-- name: ListMaturedSettlements :many

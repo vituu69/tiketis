@@ -22,6 +22,7 @@ type Querier interface {
 	CancelReservation(ctx context.Context, id uuid.UUID) error
 	// Chamado quando o gateway de pagamento confirma o sucesso da compra
 	CompleteReservation(ctx context.Context, id uuid.UUID) error
+	CreateAccount(ctx context.Context, ownerUserID pgtype.UUID) (*Account, error)
 	CreateEscrowSettlement(ctx context.Context, orderID uuid.UUID, sellerAccountID uuid.UUID, amountToRelease string, status string, releaseAt pgtype.Timestamp) (*EscrowSettlement, error)
 	// Cria o pedido inicialmente com o status 'pending' (o total_amount vira string no Go)
 	CreateOrder(ctx context.Context, userID pgtype.UUID, totalAmount string) (*Order, error)
@@ -30,6 +31,7 @@ type Querier interface {
 	CreateUser(ctx context.Context, email string, hashedPassword string) (*CreateUserRow, error)
 	// Atualiza em lote o status das reservas que passaram do tempo
 	ExpirePastReservations(ctx context.Context) error
+	GetAccount(ctx context.Context, id uuid.UUID) (*Account, error)
 	// Trava o pedido para evitar que um webhook de pagamento processado duas vezes mude o status simultaneamente
 	GetOrderForUpdate(ctx context.Context, id uuid.UUID) (*Order, error)
 	GetPrimaryTicketTypeForUpdate(ctx context.Context, id uuid.UUID) (*TicketType, error)
@@ -41,6 +43,7 @@ type Querier interface {
 	GetTicketTypeForUpdate(ctx context.Context, id uuid.UUID) (*TicketType, error)
 	GetUserByEmail(ctx context.Context, email string) (*User, error)
 	IncrementHalfPriceCount(ctx context.Context, id uuid.UUID) error
+	ListAccountsByOwner(ctx context.Context, ownerUserID pgtype.UUID) ([]*Account, error)
 	ListActiveReservationsByUser(ctx context.Context, userID uuid.UUID) ([]*TicketReservation, error)
 	// Lista os ingressos livres para o usuário escolher na tela (sem travar o banco)
 	ListAvailableTickets(ctx context.Context, ticketTypeID uuid.UUID) ([]*Ticket, error)

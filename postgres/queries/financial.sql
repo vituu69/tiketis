@@ -65,3 +65,23 @@ UPDATE escrow_settlements
 SET status = $1,
     released_at = CASE WHEN $1 = 'RELEASED' THEN NOW() ELSE released_at END
 WHERE id = $2;
+
+-- name: CreateAccount :one
+INSERT INTO accounts (
+    owner_user_id
+) VALUES (
+    $1
+)
+RETURNING id, owner_user_id, balance, created_at;
+
+-- name: ListAccountsByOwner :many
+SELECT id, owner_user_id, balance, created_at
+FROM accounts
+WHERE owner_user_id = $1
+ORDER BY created_at DESC;
+
+-- name: GetAccount :one
+SELECT id, owner_user_id, balance, created_at
+FROM accounts
+WHERE id = $1
+LIMIT 1;
